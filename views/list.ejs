@@ -12,16 +12,32 @@
           <input type="checkbox" name="checkid" value="<%=item._id %>"  onchange="this.form.submit()">
           <p> <%=item.name %></p>
         </div>
+        <input type="hidden" name="listName" value="<%=listTitle %>"></input>
         </form>
 
       <% }) %> 
       
-      
+    
 
       <form class="item" action="/" method="post">
         <input type="text" name="newItem" placeholder="New Item" autocomplete="off">
-        <button type="submit" name="list">+</button>
+        <button type="submit" name="list" value="<%= listTitle %>">+</button>
       </form>
   </div>
 
-<%- include("footer") -%>
+  <!-- <div>
+    <form class="item" method="post" action="">
+    <button type="submit" name="redirect" value="<%= listTitle %>"> </button>
+    </form>
+  </div>
+  -->
+<div>
+  <% newListItems.forEach((list)=>{ %>
+
+      <p>
+        <%=list.items %>
+      </p>
+
+    <% }) %>
+</div>
+  <%- include("footer") -%>

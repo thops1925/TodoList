@@ -1,8 +1,11 @@
 //jshint esversion:6
 
 const express = require("express");
-const date = require(__dirname + "/date.js");
 const mongoose = require("mongoose")
+const _= require('lodash')
+require('dotenv/config')
+
+
 
 const app = express();
 
@@ -11,21 +14,45 @@ app.set('view engine', 'ejs');
 app.use(express.urlencoded({extended: false}));
 app.use(express.static("public"));
 
-mongoose.connect('mongodb://localhost:27017/todo',{useNewUrlParser: true, useUnifiedTopology: true})
+  mongoose.connect(
+    process.env.DB_CONNECTION,
+  {useNewUrlParser: true, useUnifiedTopology: true}
+  )
 
 const db = mongoose.connection
 
 
+//Schema
+const itemSchema = {name: String}
+const listSchema = {name: String, items: [itemSchema ]   }
 
-const itemSchema = {
-  name : { type: String, required: true}
-}
-
+//Model
 const Item = mongoose.model('item',itemSchema)
+const List = mongoose.model('list',listSchema)
 
-const itemName = new Item({ name: "cellphone"})
+//collections List
+// const itemName = new Item({})
 
 
+
+
+//dynmic route
+app.get("/:customList",(req,res)=>{
+const customListName = _.capitalize(req.params.customList)
+
+      List.findOne({name: customListName},(err,result)=>{
+     if(!err) {
+       if(!result){
+         const listName = new List({ name:customListName , items:{}})
+        listName.save()   
+        res.redirect("/" + customListName)
+        
+       }else{
+         res.render("list", {listTitle: result.name, newListItems: result.items});   }
+     }
+      })
+
+})
 
 
 //Display Item
@@ -36,19 +63,46 @@ app.get("/", function(req, res) {
     // Item.insertMany([itemName])
     res.redirect('/')
     }
-      res.render("list", {listTitle: day, newListItems: foundItem});   
+      res.render("list", {listTitle:"Home" , newListItems: foundItem});   
   })
-const day = date.getDate();
 });
+
+// list list
+// app.get("/", function(req, res) {
+
+//   List.find({name:{}},(err, lastItem) =>{
+//     if(!lastItem){
+//     // Item.insertMany([itemName])
+//     console.log("k")
+//     res.redirect('/')
+//     }else{
+//        res.render("list", {listTitle: "Home", newListItems: lastItem}); 
+//       console.log("l") 
+//       }
+     
+//   })
+// });
+
+
 
 
 
 //Save Item
 app.post("/", function(req, res){
-  const item = req.body.newItem;
-  ItemName = new Item({ name:item})
-  ItemName.save()
+  const item = req.body.newItem
+  const lists = req.body.list
+  const saveItem = new Item({ name:item})
+  if(lists === "Home"){
+  saveItem.save()
   res.redirect('/')
+  }else{
+    List.findOne({name:lists},(err, result)=>{
+      result.items.push(saveItem) 
+      result.save()
+      res.redirect('/' +  lists)
+    })
+  }
+
 });
 
 
@@ -56,17 +110,22 @@ app.post("/", function(req, res){
 //Detele Check Item
 app.post("/delete", function(req, res) {
   const checkID = req.body.checkid
+  const listName = req.body.listName
+
+  if(listName === "Home"){
   Item.findByIdAndRemove(checkID,()=>{
-    
+      res.redirect('/')
   })
-  res.redirect('/')
+  }else{
+    List.findOneAndUpdate({name:listName},{$pull:{items:{_id:checkID}}},(err, result)=>{
+      if(!err){
+        res.redirect('/' + listName)
+      }
+    })
+  }
 })
 
 
-
-app.get("/work", function(req,res){
-  res.render("list", {listTitle: "Work List", newListItems: workItems});
-});
 
 app.get("/about", function(req, res){
   res.render("about");
